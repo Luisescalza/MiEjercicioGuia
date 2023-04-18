@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
 	//htonl formatea el numero que recibe al formato necesario
 	serv_adr.sin_addr.s_addr = htonl(INADDR_ANY);
 	// establecemos el puerto de escucha
-	serv_adr.sin_port = htons(9050);
+	serv_adr.sin_port = htons(9000);
 	if (bind(sock_listen, (struct sockaddr *) &serv_adr, sizeof(serv_adr)) < 0)
 		printf ("Error al bind");
 	//La cola de peticiones pendientes no podra ser superior a 3
@@ -39,30 +39,30 @@ int main(int argc, char *argv[])
 		printf ("He recibido conexion\n");
 		//sock_conn es el socket que usaremos para este cliente
 		
-		// Ahora recibimos su peticion
-		ret=read(sock_conn,peticion, sizeof(peticion));
-		printf ("Recibido\n");
-		// Tenemos que añadirle la marca de fin de string 
-		// para que no escriba lo que hay despues en el buffer
-		peticion[ret]='\0';
-		
-		//Escribimos la peticion en la consola
-		printf ("Peticion: %s\n",peticion);
+		int terminar =0;
+		// Entramos en un bucle para atender todas las peticiones de este cliente
+		//hasta que se desconecte
+		while (terminar ==0)
+		{
+			// Ahora recibimos la petici?n
+			ret=read(sock_conn,peticion, sizeof(peticion));
+			printf ("Recibido\n");
 
+			// Tenemos que a?adirle la marca de fin de string 
+			// para que no escriba lo que hay despues en el buffer
+			peticion[ret]='\0';
 
-		// vamos a ver que quieren
-		char *p = strtok( peticion, "/");
-		int codigo =  atoi (p);
-		// Ya tenemos el codigo de peticion
-		p = strtok( NULL, "/");
-		char nombre[20];
-		strcpy (nombre, p);
-		printf ("Codigo: %d, Nombre: %s\n", codigo, nombre);
-		
-		if (codigo ==1) //piden la longitd del nombre
-			sprintf (respuesta,"%d",strlen (nombre));
+			strcpy (nombre, p);
+				// Ya tenemos el nombre
+				printf ("Codigo: %d, Nombre: %s\n", codigo, nombre);
+			}
 
-		else if (codigo ==2)
+			if (codigo ==0) //petici?n de desconexi?n
+				terminar=1;
+			else if (codigo ==1) //piden la longitd del nombre
+				sprintf (respuesta,"%d",strlen (nombre));
+			else if (codigo ==2)
+						
 				// quieren saber si el nombre es bonito
 				if((nombre[0]=='M') || (nombre[0]=='S'))
 					strcpy (respuesta,"SI");
@@ -71,19 +71,23 @@ int main(int argc, char *argv[])
 
 			else //quiere saber si es alto
 			{
-					p = strtok( NULL, "/");
-					float altura =  atof (p);
-					if (altura > 1.70)
-						sprintf (respuesta, "%s: eres alto",nombre);
-					else
-						sprintf (respuesta, "%s: eres bajo",nombre);
+				p = strtok( NULL, "/");
+				float altura =  atof (p);
+				if (altura > 1.70)
+					sprintf (respuesta, "%s: eres alto",nombre);
+				else
+					sprintf (respuesta, "%s: eresbajo",nombre);
 			}
-			
-			printf ("Respuesta: %s\n", respuesta);
-			// Enviamos la respuesta
-			write (sock_conn,respuesta, strlen(respuesta));
-			
-			// Se acabo el servicio para este cliente
-			close(sock_conn); 
+
+			if (codigo !=0)
+			{
+
+				printf ("Respuesta: %s\n", respuesta);
+				// Enviamos respuesta
+				write (sock_conn,respuesta, strlen(respuesta));
+			}
+		}
+		// Se acabo el servicio para este cliente
+		close(sock_conn); 		
 	}
 }
